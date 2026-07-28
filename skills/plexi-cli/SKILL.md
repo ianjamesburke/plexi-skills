@@ -1,7 +1,7 @@
 ---
 name: plexi-cli
 description: Operating inside Plexi — spawn/name panes, focus, launch apps, manage contexts, surface notifications. Use when working in a Plexi pane or orchestrating other panes.
-skill_version: "4.1.0"
+skill_version: "4.1.1"
 plexi_version: "0.2.0"
 last_verified: "2026-07-28"
 ---
@@ -61,7 +61,9 @@ app install [SPEC]       Install from path, github:owner/repo, or --pack core.
 app uninstall ID         Remove an installed app.
 app list                 Show all installed apps with versions.
 app info ID              Show app details: id, name, version, tools.
-app render ID            Render to PNG. --size WxH, --state FILE, --output FILE.
+app render APP           Render an app (installed id or local path, e.g. ".") without a
+                         running host. Default output is the JSON UI tree; --png for an
+                         image. --size WxH, --state FILE, --output FILE.
 app validate [PATH]      Check app dir for errors before publish/install.
 app freeze PATH          Export installed apps as TOML snapshot (like pip freeze).
 app publish              Stub for future marketplace publishing; confirm behavior with --help.
@@ -73,10 +75,6 @@ app action ID ACTION [ARGS]  Send a semantic action to a running app (not raw te
 
 ```
 context new [NAME]       New context. --path DIR, --parent[=NAME] (bare = current context), --from PANE_ID (portal anchor; defaults to caller), -d/-l/-u/-r portal direction, --focus, --window CMD (repeatable; creates extra windows atomically).
-context sub NAME         Sub-context under the caller's context, pre-populated with panes.
-                         --agents N (1-32, default 1), --command CMD (once = all panes, or exactly N times = one each; any other count errors),
-                         --layout tiled|columns (default tiled), --path DIR (defaults to caller's cwd), --focus, --from PANE_ID.
-                         Prints {"context_id","windows","panes":[ids]} — address the panes directly, no follow-up `pane list`.
 context open [PATH]      Switch current pane to a context at PATH.
 context set-root [PATH]  Change root folder for the caller's context (PLEXI_CONTEXT_ID).
 context current          Print context id/name as JSON.
@@ -91,12 +89,7 @@ context push [NAME]      Push a pane into a new sub-context. --pane-id ID (defau
 ```
 notify --title TEXT      Required. --body TEXT, --level info|warn|error,
                          --timeout SECS (0=sticky), --scope window|context|global
-                         (default context — stays in the sending context;
-                         pass --scope global to surface everywhere).
-                         The sending context is the caller's own (PLEXI_CONTEXT_ID),
-                         never the currently active one. Outside a pane there is no
-                         sending context: --scope context|window errors, and an
-                         unscoped notify escalates to global.
+                         (default: global).
                          --choice "key:Label" (repeatable, blocks until chosen).
                          --host-action "key:action_type:arg" (runs even after caller exits).
 ```
@@ -166,7 +159,7 @@ Before writing any config key, run `plexi config list` to discover valid keys, t
 
 - `pane new` is the canonical way to open a terminal pane
 - `app open TYPE_ID` opens installed apps -- never `pane send ID "app\n"`
-- `app render` takes an installed app **ID** (not a path) -- run `app list` first
+- `app render . --png` renders the app in the current dir with no running host; default output is JSON, not an image
 - `agent init` replaces the former `app init --agent` form
 - `pane command ID "text" --enter` = send + Enter in one step (terminal panes only)
 - `pane send` with `\n` submits in shell panes but does NOT submit Claude Code prompts -- use the two-step pattern below
@@ -238,20 +231,6 @@ BALLS=$(plexi app open balls -r --from $PLEXI_PANE_ID)
 plexi app open tetris -d --from $PLEXI_PANE_ID
 plexi app open snake -d --from $BALLS
 ```
-
-### Scoped agent squad (one command)
-
-```bash
-# 3 agents in their own sub-context, rooted at the current cwd.
-SQUAD=$(plexi context sub agentsquad --agents 3 --command claude)
-# Pane ids come back in the response — no follow-up `pane list` needed.
-for P in $(echo "$SQUAD" | jq -r '.panes[]'); do plexi pane name $P "squad-$P"; done
-```
-
-Prefer this over `context new --parent --window CMD ...`: that route seeds a
-spare terminal (N commands → N+1 panes), spreads the panes across sibling
-*pages* instead of tiling them in one window, and roots the sub-context at the
-parent context's path rather than your cwd.
 
 ### Named agent dispatch lane
 
