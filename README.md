@@ -5,7 +5,7 @@ Agent skills for [Plexi](https://plexiapp.com) — teach your coding agent to dr
 ## Install
 
 ```sh
-npx skills add ianjamesburke/plexi-skills
+npx -y skills@latest add ianjamesburke/plexi-skills
 ```
 
 This installs the `plexi-cli` skill into your project's agent directories (Claude Code, Cursor, Codex, and others). Add `-g` to install globally instead.
@@ -13,8 +13,12 @@ This installs the `plexi-cli` skill into your project's agent directories (Claud
 To pin the skill to a specific Plexi release:
 
 ```sh
-npx skills add "ianjamesburke/plexi-skills#v0.2.0"
+npx -y skills@latest add "ianjamesburke/plexi-skills#v0.2.0"
 ```
+
+If a pinned install reports a clone URL with the `#v…` ref embedded in it and
+ends with `not valid`, a stale `skills` CLI is being used. Run the command above
+instead of bare `npx skills add`.
 
 ## Skills
 
